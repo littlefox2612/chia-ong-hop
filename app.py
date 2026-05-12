@@ -48,7 +48,8 @@ with st.sidebar:
             "Xóa": st.column_config.CheckboxColumn(width="small"),
             "Chiều dài (mm)": st.column_config.NumberColumn(format="%d"),
             "Số lượng": st.column_config.NumberColumn(format="%d"),
-        }
+        },
+        hide_index=True,
     )
 
     col_btn1, col_btn2 = st.columns(2)
