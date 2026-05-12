@@ -4,7 +4,6 @@ import pandas as pd
 # --- CẤU HÌNH ---
 st.set_page_config(page_title="Hệ thống Chia Phôi", layout="wide")
 
-# 1. Khởi tạo dữ liệu trong Session State
 if 'df_data' not in st.session_state:
     st.session_state.df_data = pd.DataFrame(columns=["Xóa", "Chiều dài (mm)", "Số lượng"])
 if 'history' not in st.session_state:
@@ -23,22 +22,33 @@ with st.sidebar:
     st.divider()
     st.header("➕ Nhập kích thước nhanh")
     
-    # Sử dụng form để nhấn Enter là nhận giá trị ngay
+    # SỬA ĐỔI TẠI ĐÂY: Dùng text_input để nhận giá trị gõ phím nhạy hơn
     with st.form("input_form", clear_on_submit=True):
         col_l, col_q = st.columns(2)
-        new_l = col_l.number_input("Chiều dài", min_value=1, step=1, key="new_l")
-        new_q = col_q.number_input("Số lượng", min_value=1, step=1, key="new_q")
-        submit_add = st.form_submit_button("Thêm vào danh sách", use_container_width=True)
+        # Nhập dạng chữ nhưng sẽ ép kiểu sang số sau
+        raw_l = col_l.text_input("Chiều dài", value="", placeholder="Ví dụ: 2020")
+        raw_q = col_q.text_input("Số lượng", value="1", placeholder="Ví dụ: 10")
+        
+        submit_add = st.form_submit_button("Thêm vào danh sách (Enter)", use_container_width=True)
         
         if submit_add:
-            new_row = pd.DataFrame([{"Xóa": False, "Chiều dài (mm)": new_l, "Số lượng": new_q}])
-            st.session_state.df_data = pd.concat([st.session_state.df_data, new_row], ignore_index=True)
-            st.rerun()
+            try:
+                # Ép kiểu dữ liệu và kiểm tra hợp lệ
+                val_l = int(raw_l)
+                val_q = int(raw_q)
+                if val_l > 0 and val_q > 0:
+                    new_row = pd.DataFrame([{"Xóa": False, "Chiều dài (mm)": val_l, "Số lượng": val_q}])
+                    st.session_state.df_data = pd.concat([st.session_state.df_data, new_row], ignore_index=True)
+                    st.rerun()
+                else:
+                    st.error("Số phải lớn hơn 0")
+            except:
+                st.error("Vui lòng chỉ nhập số!")
 
     st.divider()
     st.header("📋 Danh sách đã nhập")
     
-    # Bảng này giờ chỉ dùng để xem và chọn dòng cần xóa
+    # Bảng hiển thị đã ẩn cột Index (Số 0, 1, 2... None)
     edited_df = st.data_editor(
         st.session_state.df_data, 
         num_rows="dynamic", 
@@ -49,7 +59,7 @@ with st.sidebar:
             "Chiều dài (mm)": st.column_config.NumberColumn(format="%d"),
             "Số lượng": st.column_config.NumberColumn(format="%d"),
         },
-        hide_index=True,
+        hide_index=True, # Ẩn cột thừa theo yêu cầu của bạn
     )
 
     col_btn1, col_btn2 = st.columns(2)
@@ -67,7 +77,6 @@ with st.sidebar:
     st.divider()
     run_button = st.button("🚀 BẮT ĐẦU CHIA PHÔI", use_container_width=True, type="primary")
 
-# Cập nhật lại dữ liệu từ bảng (nếu người dùng sửa trực tiếp trong bảng)
 st.session_state.df_data = edited_df
 
 # --- HÀM XỬ LÝ CHIA PHÔI ---
@@ -94,7 +103,7 @@ def solve_nesting_limited(segments_list, stock_length, blade_width, max_types):
 if run_button:
     valid_data = edited_df.dropna(subset=["Chiều dài (mm)", "Số lượng"])
     if valid_data.empty:
-        st.error("Danh sách trống! Hãy nhập kích thước ở trên.")
+        st.error("Danh sách trống!")
     else:
         segments_to_process = list(zip(valid_data["Chiều dài (mm)"].astype(int), valid_data["Số lượng"].astype(int)))
         results = solve_nesting_limited(segments_to_process, L_stock, blade, max_types)
